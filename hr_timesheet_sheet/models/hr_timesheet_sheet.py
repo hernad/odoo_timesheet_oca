@@ -13,10 +13,12 @@ from dateutil.relativedelta import SU, relativedelta
 
 from odoo import SUPERUSER_ID, _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from .unit_types import _UNIT_TYPE_SELECTION
 
 _logger = logging.getLogger(__name__)
 
 empty_name = "/"
+
 
 
 class Sheet(models.Model):
@@ -405,28 +407,28 @@ class Sheet(models.Model):
 
     def _get_data_matrix(self):
         self.ensure_one()
-        MatrixKey = self._matrix_key()
+        matrix_key = self._matrix_key()
         matrix = {}
         empty_line = self.env["account.analytic.line"]
         for line in self.timesheet_ids:
-            key = MatrixKey(**self._get_matrix_key_values_for_line(line))
+            key = matrix_key(**self._get_matrix_key_values_for_line(line))
             if key not in matrix:
                 matrix[key] = empty_line
             matrix[key] += line
         for date in self._get_dates():
             for key in matrix.copy():
-                key = MatrixKey(**{**key._asdict(), "date": date})
+                key = matrix_key(**{**key._asdict(), "date": date})
                 if key not in matrix:
                     matrix[key] = empty_line
         return matrix
 
     def _compute_timesheet_ids(self):
-        AccountAnalyticLines = self.env["account.analytic.line"]
+        account_analytic_lines = self.env["account.analytic.line"]
         for sheet in self:
             domain = sheet._get_timesheet_sheet_lines_domain()
-            timesheets = AccountAnalyticLines.search(domain)
-            sheet.link_timesheets_to_sheet(timesheets)
-            sheet.timesheet_ids = [(6, 0, timesheets.ids)]
+            time_sheets = account_analytic_lines.search(domain)
+            sheet.link_timesheets_to_sheet(time_sheets)
+            sheet.timesheet_ids = [(6, 0, time_sheets.ids)]
 
     @api.onchange("date_start", "date_end", "employee_id")
     def _onchange_scope(self):
@@ -457,20 +459,20 @@ class Sheet(models.Model):
         else:
             return {"domain": {"add_line_task_id": [("id", "=", False)]}}
 
-    @api.model
-    def _check_employee_user_link(self, vals):
-        if "employee_id" in vals:
-            employee = self.env["hr.employee"].sudo().browse(vals["employee_id"])
-            if not employee.user_id:
-                raise UserError(
-                    _(
-                        "In order to create a sheet for this employee, you must"
-                        " link him/her to an user: %s"
-                    )
-                    % (employee.name,)
-                )
-            return employee.user_id.id
-        return False
+    #@api.model
+    #def _check_employee_user_link(self, vals):
+    #    if "employee_id" in vals:
+    #        employee = self.env["hr.employee"].sudo().browse(vals["employee_id"])
+    #        if not employee.user_id:
+    #            raise UserError(
+    #                _(
+    #                    "In order to create a sheet for this employee, you must"
+    #                    " link him/her to an user: %s"
+    #                )
+    #                % (employee.name,)
+    #            )
+    #        return employee.user_id.id
+    #    return False
 
     def copy(self, default=None):
         if not self.env.context.get("allow_copy_timesheet"):
@@ -479,7 +481,7 @@ class Sheet(models.Model):
 
     @api.model
     def create(self, vals):
-        self._check_employee_user_link(vals)
+        #self._check_employee_user_link(vals)
         res = super().create(vals)
         res.write({"state": "draft"})
         return res
@@ -488,7 +490,7 @@ class Sheet(models.Model):
         self.with_context(sheet_write=True).write({field: [(6, 0, recs.ids)]})
 
     def write(self, vals):
-        self._check_employee_user_link(vals)
+        #self._check_employee_user_link(vals)
         res = super().write(vals)
         for rec in self:
             if rec.state == "draft" and not self.env.context.get("sheet_write"):
@@ -624,6 +626,7 @@ class Sheet(models.Model):
             "project_id": key.project_id.id,
             "task_id": key.task_id.id,
             "unit_amount": sum(t.unit_amount for t in matrix[key]),
+            #"unit_type": sum(t.unit_type for t in matrix[key]),
             "employee_id": self.employee_id.id,
             "company_id": self.company_id.id,
         }
@@ -641,6 +644,7 @@ class Sheet(models.Model):
             "task_id": self.add_line_task_id.id,
             "sheet_id": self.id,
             "unit_amount": 0.0,
+            "unit_type": "regular",
             "company_id": self.company_id.id,
         }
 
@@ -817,6 +821,11 @@ class AbstractSheetLine(models.AbstractModel):
     project_id = fields.Many2one(comodel_name="project.project", string="Project")
     task_id = fields.Many2one(comodel_name="project.task", string="Task")
     unit_amount = fields.Float(string="Quantity", default=0.0)
+    unit_type = fields.Selection(
+        selection=_UNIT_TYPE_SELECTION,
+        default="regular",
+        required=True,
+    )
     company_id = fields.Many2one(comodel_name="res.company", string="Company")
     employee_id = fields.Many2one(comodel_name="hr.employee", string="Employee")
 
@@ -840,13 +849,13 @@ class SheetLine(models.TransientModel):
         """This method is called when filling a cell of the matrix."""
         self.ensure_one()
         sheet = self._get_sheet()
-        if not sheet:
-            return {
-                "warning": {
-                    "title": _("Warning"),
-                    "message": _("Save the Timesheet Sheet first."),
-                }
-            }
+        #if not sheet:
+        #    return {
+        #        "warning": {
+        #            "title": _("Warning"),
+        #            "message": _("Save the Timesheet Sheet first."),
+        #        }
+        #    }
         sheet.add_new_line(self)
 
     @api.model

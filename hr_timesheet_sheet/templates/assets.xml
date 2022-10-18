@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <odoo>
+ <!-- hernad
     <template id="assets_backend" inherit_id="web.assets_backend">
         <xpath expr=".">
             <script src="/hr_timesheet_sheet/static/src/js/backend.js" />
@@ -10,4 +11,5 @@
             />
         </xpath>
     </template>
+ -->
 </odoo>

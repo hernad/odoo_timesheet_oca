@@ -4,13 +4,14 @@
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
-
+from .unit_types import _UNIT_TYPE_SELECTION
 
 class AccountAnalyticLine(models.Model):
     _inherit = "account.analytic.line"
 
     sheet_id = fields.Many2one(comodel_name="hr_timesheet.sheet", string="Sheet")
     sheet_state = fields.Selection(string="Sheet State", related="sheet_id.state")
+    #unit_type = fields.Selection(string="Unit_type", related="sheet_id.line_ids.unit_type")
 
     def _get_sheet_domain(self):
         """Hook for extensions"""
@@ -103,6 +104,7 @@ class AccountAnalyticLine(models.Model):
             "name",
             "date",
             "unit_amount",
+            #"unit_type",
             "user_id",
             "employee_id",
             "department_id",
@@ -130,9 +132,20 @@ class AccountAnalyticLine(models.Model):
                     % (line.sheet_id.complete_name,)
                 )
 
+
+    #def merge_timesheets(self):  # pragma: no cover
+    #    """This method is needed in case hr_timesheet_sheet is installed"""
+    #    lines = self.filtered(lambda l: not l.time_start and not l.time_stop)
+    #    if lines:
+    #        return super(AccountAnalyticLine, lines).merge_timesheets()
+    #    return self[0]
+
     def merge_timesheets(self):
         unit_amount = sum([t.unit_amount for t in self])
         amount = sum([t.amount for t in self])
-        self[0].write({"unit_amount": unit_amount, "amount": amount})
+        self[0].write({
+            "unit_amount": unit_amount,
+            "amount": amount
+        })
         self[1:].unlink()
         return self[0]
