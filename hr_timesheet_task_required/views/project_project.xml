@@ -20,6 +20,31 @@ License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
             </field>
         </field>
     </record>
+
+    <record id="project_invoice_form" model="ir.ui.view">
+        <field name="name">project.project.form.inherit</field>
+        <field name="model">project.project</field>
+        <field name="inherit_id" ref="project.edit_project"/>
+        <field name="priority">24</field>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@id='timesheet_settings']" position="after">
+                <div class="o_setting_box" id="task_required_settings" colspan="2">
+                    <div class="o_setting_left_pane" attrs="{'invisible': [('allow_timesheets', '=', False)]}">
+                        <field name="is_timesheet_task_required"
+                               class="oe_inline" />
+                    </div>
+                    <div class="o_setting_right_pane">
+                        <label for="is_timesheet_task_required" string="Task required"/>
+                        <div class="text-muted">
+                            This project requires tasks
+                        </div>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- NOT exists in odoo16 //div[@name='options_active']
     <record id="project_invoice_form" model="ir.ui.view">
         <field name="name">project.project.view.form</field>
         <field name="model">project.project</field>
@@ -37,4 +62,5 @@ License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
             </xpath>
         </field>
     </record>
+    -->
 </odoo>
